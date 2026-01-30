@@ -1,0 +1,701 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  Engine,
+  Scene,
+  ArcRotateCamera,
+  HemisphericLight,
+  DirectionalLight,
+  PointLight,
+  SpotLight,
+  Vector3,
+  MeshBuilder,
+  PBRMetallicRoughnessMaterial,
+  Color3,
+  Color4,
+  TransformNode,
+  ShadowGenerator,
+  Mesh,
+  SceneLoader,
+  ImageProcessingConfiguration,
+  AbstractMesh,
+} from "@babylonjs/core";
+import "@babylonjs/loaders/glTF";
+
+// Product types
+type JewelleryType = "ring" | "necklace" | "bracelet";
+type MaterialType = "gold" | "silver" | "rose-gold";
+type ViewMode = "hand" | "neck";
+
+interface Product {
+  id: string;
+  name: string;
+  type: JewelleryType;
+  price: number;
+  material: MaterialType;
+  image?: string;
+}
+
+// Sample products
+const PRODUCTS: Product[] = [
+  {
+    id: "1",
+    name: "Gold Band Ring",
+    type: "ring",
+    price: 299,
+    material: "gold",
+  },
+  {
+    id: "2",
+    name: "Silver Diamond Ring",
+    type: "ring",
+    price: 499,
+    material: "silver",
+  },
+  {
+    id: "3",
+    name: "Rose Gold Ring",
+    type: "ring",
+    price: 399,
+    material: "rose-gold",
+  },
+  {
+    id: "4",
+    name: "Gold Chain Necklace",
+    type: "necklace",
+    price: 599,
+    material: "gold",
+  },
+  {
+    id: "5",
+    name: "Silver Pendant",
+    type: "necklace",
+    price: 699,
+    material: "silver",
+  },
+  {
+    id: "6",
+    name: "Gold Bracelet",
+    type: "bracelet",
+    price: 449,
+    material: "gold",
+  },
+];
+
+export default function JewelleryShowroom() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sceneRef = useRef<Scene | null>(null);
+  const handModelRef = useRef<AbstractMesh | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("hand");
+  const [currentJewellery, setCurrentJewellery] = useState<Mesh | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const engine = new Engine(canvas, true, {
+      preserveDrawingBuffer: true,
+      stencil: true,
+    });
+    const scene = new Scene(engine);
+    sceneRef.current = scene;
+
+    // Pure black background (original)
+    scene.clearColor = new Color4(0, 0, 0, 1);
+
+    // Camera setup (original configuration)
+    const camera = new ArcRotateCamera(
+      "camera",
+      2.6340167868659607, // Original alpha
+      1.994395102393196, // Original beta
+      3, // Original radius
+      new Vector3(0, 1, 0), // Original target
+      scene,
+    );
+    camera.attachControl(canvas, true);
+    camera.lowerRadiusLimit = 1.5;
+    camera.upperRadiusLimit = 6;
+    camera.wheelPrecision = 50;
+
+    // 5-Light Setup - Original Cinematic Split Lighting
+
+    // 1. Key Light 1 (Red/Magenta) - LEFT
+    const keyLight = new DirectionalLight(
+      "keyLight",
+      new Vector3(1.5, -10, 0),
+      scene,
+    );
+    keyLight.position = new Vector3(-10, -3, -1.0);
+    keyLight.intensity = 8.0;
+    keyLight.diffuse = new Color3(1.0, 1.0, 1.0); // Red/Magenta
+
+    // 2. Key Light 2 (Cyan/Blue) - RIGHT
+    const keyLight2 = new DirectionalLight(
+      "keyLight2",
+      new Vector3(-1.5, 10, 0),
+      scene,
+    );
+    keyLight2.position = new Vector3(10, 3, 1.0);
+    keyLight2.intensity = 8.0;
+    keyLight2.diffuse = new Color3(1.0, 1.0, 1.0); // Cyan/Blue
+
+    // 3. Fill Light (Hemispheric)
+    const fillLight = new HemisphericLight(
+      "fillLight",
+      new Vector3(0, 1, 0),
+      scene,
+    );
+    fillLight.intensity = 0.1;
+    fillLight.diffuse = new Color3(0.3, 0.3, 0.4);
+    fillLight.groundColor = new Color3(0.1, 0.1, 0.15);
+
+    // 4. Rim Light (Point Light) - DISABLED
+    const rimLight = new PointLight("rimLight", new Vector3(-4, 3, -2), scene);
+    rimLight.intensity = 0.0; // Disabled
+    rimLight.diffuse = new Color3(0.98, 0.95, 0.92);
+
+    // 5. Accent Light (Spot Light)
+    const accentLight = new SpotLight(
+      "accentLight",
+      new Vector3(2, 3, 2),
+      new Vector3(-0.5, -1, -0.5),
+      Math.PI / 3,
+      2,
+      scene,
+    );
+    accentLight.intensity = 0.5;
+    accentLight.diffuse = new Color3(1, 1, 1);
+
+    // Shadow generators - Enhanced for dramatic realism
+    const shadowGenerator = new ShadowGenerator(4096, keyLight);
+    shadowGenerator.usePercentageCloserFiltering = true;
+    shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+    shadowGenerator.darkness = 3.0; // Increased for more dramatic shadows
+    shadowGenerator.bias = 0.00001;
+    shadowGenerator.useContactHardeningShadow = true; // More realistic shadow softening
+    shadowGenerator.contactHardeningLightSizeUVRatio = 0.05;
+    shadowGenerator.blurKernel = 64; // Soft shadow edges
+    shadowGenerator.blurScale = 2;
+    shadowGenerator.useKernelBlur = true;
+    shadowGenerator.depthScale = 50; // Better depth perception
+
+    const shadowGenerator2 = new ShadowGenerator(2048, keyLight2);
+    shadowGenerator2.usePercentageCloserFiltering = true;
+    shadowGenerator2.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+    shadowGenerator2.darkness = 0.85; // Complementary shadow from second light
+    shadowGenerator2.bias = 0.00001;
+    shadowGenerator2.useKernelBlur = true;
+    shadowGenerator2.blurKernel = 32;
+
+    // Post-processing - Original configuration
+    scene.imageProcessingConfiguration.vignetteEnabled = true;
+    scene.imageProcessingConfiguration.vignetteWeight = 4.0;
+    scene.imageProcessingConfiguration.vignetteStretch = 0.3;
+    scene.imageProcessingConfiguration.vignetteColor = new Color4(0, 0, 0, 1);
+    scene.imageProcessingConfiguration.vignetteCameraFov = 0.5;
+
+    scene.imageProcessingConfiguration.toneMappingEnabled = true;
+    scene.imageProcessingConfiguration.toneMappingType =
+      ImageProcessingConfiguration.TONEMAPPING_ACES;
+    scene.imageProcessingConfiguration.exposure = 1.2;
+    scene.imageProcessingConfiguration.contrast = 1.3;
+
+    scene.imageProcessingConfiguration.colorGradingEnabled = true;
+    scene.imageProcessingConfiguration.colorCurvesEnabled = true;
+
+    // Load hand model from GLB file
+    loadHandModel(scene, shadowGenerator, shadowGenerator2);
+
+    // Render loop
+    engine.runRenderLoop(() => {
+      scene.render();
+    });
+
+    // Resize handler
+    const handleResize = () => {
+      engine.resize();
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      scene.dispose();
+      engine.dispose();
+    };
+  }, []);
+
+  // Switch view mode
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    const scene = sceneRef.current;
+
+    // Clear existing model
+    scene.meshes.forEach((mesh) => {
+      if (mesh.name.includes("hand") || mesh.name.includes("neck")) {
+        mesh.dispose();
+      }
+    });
+
+    // Clear anchors
+    scene.transformNodes.forEach((node) => {
+      if (node.name.includes("anchor")) {
+        node.dispose();
+      }
+    });
+
+    // Get shadow generators
+    const keyLight = scene.getLightByName("keyLight") as DirectionalLight;
+    const keyLight2 = scene.getLightByName("keyLight2") as DirectionalLight;
+    const shadowGenerator = keyLight
+      ? new ShadowGenerator(4096, keyLight)
+      : null;
+    const shadowGenerator2 = keyLight2
+      ? new ShadowGenerator(2048, keyLight2)
+      : null;
+
+    if (shadowGenerator) {
+      shadowGenerator.usePercentageCloserFiltering = true;
+      shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+      shadowGenerator.darkness = 3.0;
+      shadowGenerator.bias = 0.00001;
+    }
+
+    if (shadowGenerator2) {
+      shadowGenerator2.usePercentageCloserFiltering = true;
+    }
+
+    if (viewMode === "hand") {
+      loadHandModel(scene, shadowGenerator, shadowGenerator2);
+    } else {
+      createNeckModel(scene, shadowGenerator);
+    }
+
+    // Clear current jewellery
+    if (currentJewellery) {
+      currentJewellery.dispose();
+      setCurrentJewellery(null);
+    }
+  }, [viewMode]);
+
+  const loadHandModel = async (
+    scene: Scene,
+    shadowGenerator: ShadowGenerator | null,
+    shadowGenerator2: ShadowGenerator | null,
+  ) => {
+    try {
+      setIsLoading(true);
+
+      // Load the hand GLB model
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "/models/hand/",
+        "hand.glb",
+        scene,
+      );
+
+      const rootMesh = result.meshes[0];
+      handModelRef.current = rootMesh;
+
+      // Position the hand model
+      rootMesh.position.y = 1; // Adjust this value to move hand up/down
+
+      // Apply original skin shader configuration to all meshes
+      result.meshes.forEach((mesh) => {
+        if (mesh.material) {
+          const material = mesh.material as PBRMetallicRoughnessMaterial;
+
+          // Subsurface Scattering (SSS)
+          if (material.subSurface) {
+            material.subSurface.isTranslucencyEnabled = true;
+            material.subSurface.translucencyIntensity = 0.5;
+            material.subSurface.tintColor = new Color3(1.0, 0.95, 0.93);
+            material.subSurface.minimumThickness = 1.0;
+            material.subSurface.maximumThickness = 10.0;
+          }
+
+          // Emissive (Self-Illumination)
+          material.emissiveColor = new Color3(0.75, 0.73, 0.71);
+          material.emissiveIntensity = 0.2;
+
+          // Lighten skin tone
+          if (material.albedoColor) {
+            material.albedoColor = material.albedoColor.scale(1.6);
+          }
+          if ((material as any).baseColor) {
+            (material as any).baseColor = (material as any).baseColor.scale(
+              1.6,
+            );
+          }
+
+          // Surface properties
+          material.microSurface = 0.75;
+          material.roughness = 0.85;
+          material.specularIntensity = 0.3;
+          (material as any).metallicF0Factor = 0.5;
+
+          // Environment reflection
+          (material as any)._environmentIntensity = 1.0;
+          material.useRadianceOverAlpha = true;
+          material.useSpecularOverAlpha = true;
+        }
+
+        // Add to shadow casters
+        if (shadowGenerator && mesh !== rootMesh) {
+          shadowGenerator.addShadowCaster(mesh);
+          mesh.receiveShadows = true;
+        }
+        if (shadowGenerator2 && mesh !== rootMesh) {
+          shadowGenerator2.addShadowCaster(mesh);
+        }
+      });
+
+      // Create anchors for rings on fingers
+      const fingerNames = ["thumb", "index", "middle", "ring", "pinky"];
+      const anchorPositions = [
+        new Vector3(-0.15, 0.65, 0.05), // thumb
+        new Vector3(-0.08, 0.9, -0.02), // index
+        new Vector3(0, 1.0, -0.02), // middle
+        new Vector3(0.08, 0.95, -0.02), // ring
+        new Vector3(0.15, 0.8, 0), // pinky
+      ];
+
+      fingerNames.forEach((name, index) => {
+        const anchor = new TransformNode(`anchor_ring_${name}`, scene);
+        anchor.position = anchorPositions[index];
+        anchor.parent = rootMesh;
+      });
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error loading hand model:", error);
+      setIsLoading(false);
+    }
+  };
+
+  const createNeckModel = (
+    scene: Scene,
+    shadowGenerator: ShadowGenerator | null,
+  ) => {
+    // Neck cylinder
+    const neck = MeshBuilder.CreateCylinder(
+      "neck_cylinder",
+      { height: 1.5, diameterTop: 0.5, diameterBottom: 0.6 },
+      scene,
+    );
+    neck.position = new Vector3(0, 0, 0);
+
+    // Bust/shoulders
+    const bust = MeshBuilder.CreateSphere(
+      "neck_bust",
+      { diameter: 1.8, segments: 16 },
+      scene,
+    );
+    bust.position = new Vector3(0, -0.9, 0);
+    bust.scaling.y = 0.4;
+
+    // Skin material
+    const skinMat = new PBRMetallicRoughnessMaterial("skin", scene);
+    skinMat.baseColor = new Color3(0.95, 0.8, 0.7);
+    skinMat.metallic = 0;
+    skinMat.roughness = 0.9;
+    neck.material = skinMat;
+    bust.material = skinMat;
+
+    if (shadowGenerator) {
+      shadowGenerator.addShadowCaster(neck);
+      shadowGenerator.addShadowCaster(bust);
+      neck.receiveShadows = true;
+      bust.receiveShadows = true;
+    }
+
+    // Necklace anchor
+    const anchor = new TransformNode("anchor_necklace", scene);
+    anchor.position = new Vector3(0, 0.5, 0.3);
+  };
+
+  const getMaterialColor = (material: MaterialType): Color3 => {
+    switch (material) {
+      case "gold":
+        return new Color3(1, 0.84, 0);
+      case "silver":
+        return new Color3(0.75, 0.75, 0.75);
+      case "rose-gold":
+        return new Color3(0.96, 0.76, 0.69);
+    }
+  };
+
+  const tryOnProduct = async (product: Product) => {
+    if (!sceneRef.current) return;
+    const scene = sceneRef.current;
+
+    // Remove existing jewellery
+    if (currentJewellery) {
+      currentJewellery.dispose();
+      if (currentJewellery.metadata?.pendant) {
+        currentJewellery.metadata.pendant.dispose();
+      }
+    }
+
+    try {
+      if (product.type === "ring") {
+        // Load ring GLB model
+        const result = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/ring/",
+          "one_ring.glb",
+          scene,
+        );
+
+        const ringMesh = result.meshes[0];
+
+        // Find anchor
+        const anchor = scene.getTransformNodeByName("anchor_ring_middle");
+        if (anchor) {
+          ringMesh.parent = anchor;
+          ringMesh.position = Vector3.Zero();
+          ringMesh.scaling = new Vector3(0.02, 0.02, 0.02); // Scale down the ring
+          ringMesh.rotation = new Vector3(Math.PI / 2, 0, 0);
+        }
+
+        // Apply material to ring meshes
+        result.meshes.forEach((mesh) => {
+          if (mesh.material) {
+            const material = mesh.material as PBRMetallicRoughnessMaterial;
+
+            // Override with selected material color
+            material.baseColor = getMaterialColor(product.material);
+            material.metallic = 1.0;
+            material.roughness = 0.2;
+            material.environmentIntensity = 1.5;
+          }
+        });
+
+        setCurrentJewellery(ringMesh as Mesh);
+      } else if (product.type === "necklace") {
+        // Create necklace chain
+        const chain = MeshBuilder.CreateTorus(
+          "necklace",
+          { diameter: 0.6, thickness: 0.015, tessellation: 48 },
+          scene,
+        );
+
+        // Create pendant
+        const pendant = MeshBuilder.CreateSphere(
+          "pendant",
+          { diameter: 0.08 },
+          scene,
+        );
+        pendant.position = new Vector3(0, -0.35, 0);
+
+        // Find anchor
+        const anchor = scene.getTransformNodeByName("anchor_necklace");
+        if (anchor) {
+          chain.parent = anchor;
+          pendant.parent = anchor;
+          chain.position = Vector3.Zero();
+        }
+
+        // Apply PBR material
+        const mat = new PBRMetallicRoughnessMaterial("jewelleryMat", scene);
+        mat.baseColor = getMaterialColor(product.material);
+        mat.metallic = 1;
+        mat.roughness = 0.2;
+        mat.environmentIntensity = 1.5;
+        chain.material = mat;
+        pendant.material = mat;
+
+        chain.metadata = { pendant };
+        setCurrentJewellery(chain);
+      } else if (product.type === "bracelet") {
+        // Create bracelet
+        const bracelet = MeshBuilder.CreateTorus(
+          "bracelet",
+          { diameter: 0.15, thickness: 0.025, tessellation: 32 },
+          scene,
+        );
+
+        // Position on wrist
+        bracelet.position = new Vector3(0, 0.4, -0.1);
+        bracelet.rotation = new Vector3(Math.PI / 2, 0, 0);
+
+        // Apply PBR material
+        const mat = new PBRMetallicRoughnessMaterial("jewelleryMat", scene);
+        mat.baseColor = getMaterialColor(product.material);
+        mat.metallic = 1;
+        mat.roughness = 0.2;
+        mat.environmentIntensity = 1.5;
+        bracelet.material = mat;
+
+        setCurrentJewellery(bracelet);
+      }
+    } catch (error) {
+      console.error("Error loading jewellery:", error);
+    }
+  };
+
+  const handleTryOn = () => {
+    if (selectedProduct) {
+      // Switch view if needed
+      if (selectedProduct.type === "necklace" && viewMode !== "neck") {
+        setViewMode("neck");
+        setTimeout(() => tryOnProduct(selectedProduct), 100);
+      } else if (
+        (selectedProduct.type === "ring" ||
+          selectedProduct.type === "bracelet") &&
+        viewMode !== "hand"
+      ) {
+        setViewMode("hand");
+        setTimeout(() => tryOnProduct(selectedProduct), 100);
+      } else {
+        tryOnProduct(selectedProduct);
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-900">
+              💎 3D Jewellery Showroom
+            </h1>
+            <a
+              href="/"
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition"
+            >
+              ← Back to Home
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Product Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-md p-4 space-y-4">
+              <h2 className="text-lg font-semibold text-gray-900">Products</h2>
+
+              {/* View Mode Toggle */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setViewMode("hand")}
+                  className={`flex-1 px-3 py-2 rounded text-sm font-medium transition ${
+                    viewMode === "hand"
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  👋 Hand
+                </button>
+                <button
+                  onClick={() => setViewMode("neck")}
+                  className={`flex-1 px-3 py-2 rounded text-sm font-medium transition ${
+                    viewMode === "neck"
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  💎 Neck
+                </button>
+              </div>
+
+              {/* Product List */}
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {PRODUCTS.map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => setSelectedProduct(product)}
+                    className={`w-full text-left p-3 rounded-lg border-2 transition ${
+                      selectedProduct?.id === product.id
+                        ? "border-purple-600 bg-purple-50"
+                        : "border-gray-200 hover:border-purple-300 bg-white"
+                    }`}
+                  >
+                    <div className="font-semibold text-sm text-gray-900">
+                      {product.name}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      {product.type.charAt(0).toUpperCase() +
+                        product.type.slice(1)}
+                    </div>
+                    <div className="text-sm font-bold text-purple-600 mt-1">
+                      ${product.price}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Try On Button */}
+              {selectedProduct && (
+                <div className="pt-4 border-t">
+                  <button
+                    onClick={handleTryOn}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition shadow-md hover:shadow-lg"
+                  >
+                    Try On
+                  </button>
+                  <div className="mt-2 text-xs text-center text-gray-500">
+                    {selectedProduct.name} • ${selectedProduct.price}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3D Viewer */}
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
+              {isLoading && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+                  <div className="text-white text-lg font-semibold">
+                    Loading 3D Model...
+                  </div>
+                </div>
+              )}
+              <canvas
+                ref={canvasRef}
+                className="w-full"
+                style={{ height: "600px" }}
+              />
+              <div className="p-4 bg-gray-50 border-t">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    <strong>Controls:</strong> Drag to rotate • Scroll to zoom
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Viewing:{" "}
+                    <strong>
+                      {viewMode === "hand" ? "Hand Model" : "Neck Model"}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-900 mb-2">How to Use:</h3>
+              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <li>Wait for the hand model to load</li>
+                <li>Select a product from the sidebar</li>
+                <li>Click "Try On" to see it on the 3D model</li>
+                <li>Drag to rotate the view, scroll to zoom</li>
+                <li>Toggle between Hand and Neck views</li>
+              </ol>
+              <div className="mt-3 text-xs text-blue-700">
+                <strong>Note:</strong> Using original cinematic split-lighting
+                with red/cyan key lights for dramatic effect
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
