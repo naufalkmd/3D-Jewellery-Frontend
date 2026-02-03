@@ -1,3 +1,18 @@
+/**
+ * 3D Jewellery Virtual Try-On Showroom
+ *
+ * This component provides an interactive 3D environment for trying on jewellery
+ * using Babylon.js rendering engine with realistic PBR materials and lighting.
+ *
+ * Features:
+ * - Real-time 3D rendering with Babylon.js
+ * - Hand and neck model support for different jewellery types
+ * - Cinematic split lighting setup
+ * - PBR materials for realistic appearance
+ * - Interactive camera controls (rotate, zoom)
+ * - Dynamic jewellery loading and attachment
+ */
+
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -23,11 +38,20 @@ import {
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 
-// Product types
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/** Type of jewellery item */
 type JewelleryType = "ring" | "necklace" | "bracelet";
+
+/** Material finish options */
 type MaterialType = "gold" | "silver" | "rose-gold";
+
+/** 3D view mode (body part to display) */
 type ViewMode = "hand" | "neck";
 
+/** Product data structure */
 interface Product {
   id: string;
   name: string;
@@ -37,7 +61,11 @@ interface Product {
   image?: string;
 }
 
-// Sample products
+// ============================================================================
+// PRODUCT CATALOG
+// ============================================================================
+
+/** Sample product catalog for demonstration */
 const PRODUCTS: Product[] = [
   {
     id: "1",
@@ -83,30 +111,61 @@ const PRODUCTS: Product[] = [
   },
 ];
 
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+/**
+ * JewelleryShowroom Component
+ *
+ * Main component that renders the 3D showroom interface with product selection
+ * and interactive 3D visualization.
+ */
 export default function JewelleryShowroom() {
+  // ========== REFS ==========
+  /** Reference to the HTML canvas element for Babylon.js rendering */
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  /** Reference to the Babylon.js scene */
   const sceneRef = useRef<Scene | null>(null);
+
+  /** Reference to the loaded hand model */
   const handModelRef = useRef<AbstractMesh | null>(null);
+
+  // ========== STATE ==========
+  /** Currently selected product from the catalog */
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  /** Current view mode (hand or neck) */
   const [viewMode, setViewMode] = useState<ViewMode>("hand");
+
+  /** Currently displayed jewellery mesh in the scene */
   const [currentJewellery, setCurrentJewellery] = useState<Mesh | null>(null);
+
+  /** Loading state for 3D models */
   const [isLoading, setIsLoading] = useState(true);
+
+  // ============================================================================
+  // 3D SCENE INITIALIZATION
+  // ============================================================================
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
+    // ========== ENGINE & SCENE SETUP ==========
     const canvas = canvasRef.current;
     const engine = new Engine(canvas, true, {
-      preserveDrawingBuffer: true,
-      stencil: true,
+      preserveDrawingBuffer: true, // Enable screenshot capability
+      stencil: true, // Enable stencil buffer for advanced effects
     });
     const scene = new Scene(engine);
     sceneRef.current = scene;
 
-    // Pure black background (original)
+    // Set pure black background for dramatic contrast
     scene.clearColor = new Color4(0, 0, 0, 1);
 
-    // Camera setup (original configuration)
+    // ========== CAMERA CONFIGURATION ==========
+    // Arc rotate camera allows orbital movement around the model
     const camera = new ArcRotateCamera(
       "camera",
       2.6340167868659607, // Original alpha
@@ -116,13 +175,16 @@ export default function JewelleryShowroom() {
       scene,
     );
     camera.attachControl(canvas, true);
-    camera.lowerRadiusLimit = 1.5;
-    camera.upperRadiusLimit = 6;
-    camera.wheelPrecision = 50;
+    camera.lowerRadiusLimit = 1.5; // Minimum zoom distance
+    camera.upperRadiusLimit = 6; // Maximum zoom distance
+    camera.wheelPrecision = 50; // Mouse wheel sensitivity
 
-    // 5-Light Setup - Original Cinematic Split Lighting
+    // ========== CINEMATIC LIGHTING SETUP ==========
+    // 5-light configuration for dramatic split lighting effect
+    // This creates depth, dimension, and visual interest
 
-    // 1. Key Light 1 (Red/Magenta) - LEFT
+    // KEY LIGHT 1 (LEFT SIDE)
+    // Main directional light providing primary illumination
     const keyLight = new DirectionalLight(
       "keyLight",
       new Vector3(1.5, -10, 0),
@@ -169,7 +231,10 @@ export default function JewelleryShowroom() {
     accentLight.intensity = 0.5;
     accentLight.diffuse = new Color3(1, 1, 1);
 
-    // Shadow generators - Enhanced for dramatic realism
+    // ========== SHADOW CONFIGURATION ==========
+    // High-quality shadows for photorealistic rendering
+
+    // Primary shadow generator (from key light 1)
     const shadowGenerator = new ShadowGenerator(4096, keyLight);
     shadowGenerator.usePercentageCloserFiltering = true;
     shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
@@ -190,7 +255,10 @@ export default function JewelleryShowroom() {
     shadowGenerator2.useKernelBlur = true;
     shadowGenerator2.blurKernel = 32;
 
-    // Post-processing - Original configuration
+    // ========== POST-PROCESSING EFFECTS ==========
+    // Image processing for cinematic look
+
+    // Vignette effect (darkened corners)
     scene.imageProcessingConfiguration.vignetteEnabled = true;
     scene.imageProcessingConfiguration.vignetteWeight = 4.0;
     scene.imageProcessingConfiguration.vignetteStretch = 0.3;
@@ -206,28 +274,40 @@ export default function JewelleryShowroom() {
     scene.imageProcessingConfiguration.colorGradingEnabled = true;
     scene.imageProcessingConfiguration.colorCurvesEnabled = true;
 
-    // Load hand model from GLB file
+    // ========== MODEL LOADING ==========
+    // Load initial hand model with shadows
     loadHandModel(scene, shadowGenerator, shadowGenerator2);
 
-    // Render loop
+    // ========== RENDER LOOP ==========
+    // Continuous rendering at display refresh rate
     engine.runRenderLoop(() => {
       scene.render();
     });
 
-    // Resize handler
+    // ========== WINDOW RESIZE HANDLER ==========
+    // Update canvas size on window resize
     const handleResize = () => {
       engine.resize();
     };
     window.addEventListener("resize", handleResize);
 
+    // ========== CLEANUP ==========
+    // Dispose resources when component unmounts
     return () => {
       window.removeEventListener("resize", handleResize);
-      scene.dispose();
-      engine.dispose();
+      scene.dispose(); // Free scene memory
+      engine.dispose(); // Free engine resources
     };
   }, []);
 
-  // Switch view mode
+  // ============================================================================
+  // VIEW MODE SWITCHING
+  // ============================================================================
+
+  /**
+   * Effect: Handle switching between hand and neck view modes
+   * Disposes current model and loads appropriate model for the view
+   */
   useEffect(() => {
     if (!sceneRef.current) return;
     const scene = sceneRef.current;
@@ -280,6 +360,17 @@ export default function JewelleryShowroom() {
     }
   }, [viewMode]);
 
+  // ============================================================================
+  // 3D MODEL LOADING FUNCTIONS
+  // ============================================================================
+
+  /**
+   * Load hand model from GLB file
+   *
+   * @param scene - Babylon.js scene
+   * @param shadowGenerator - Primary shadow generator
+   * @param shadowGenerator2 - Secondary shadow generator
+   */
   const loadHandModel = async (
     scene: Scene,
     shadowGenerator: ShadowGenerator | null,
@@ -299,10 +390,11 @@ export default function JewelleryShowroom() {
       const rootMesh = result.meshes[0];
       handModelRef.current = rootMesh;
 
-      // Position the hand model
-      rootMesh.position.y = 1; // Adjust this value to move hand up/down
+      // ========== MODEL POSITIONING ==========
+      rootMesh.position.y = 1; // Vertical position adjustment
 
-      // Apply original skin shader configuration to all meshes
+      // ========== SKIN MATERIAL CONFIGURATION ==========
+      // Apply realistic skin shader with subsurface scattering
       result.meshes.forEach((mesh) => {
         if (mesh.material) {
           const material = mesh.material as PBRMetallicRoughnessMaterial;
@@ -352,7 +444,8 @@ export default function JewelleryShowroom() {
         }
       });
 
-      // Create anchors for rings on fingers
+      // ========== CREATE FINGER ANCHORS ==========
+      // Anchor points for attaching rings to different fingers
       const fingerNames = ["thumb", "index", "middle", "ring", "pinky"];
       const anchorPositions = [
         new Vector3(-0.15, 0.65, 0.05), // thumb
@@ -375,6 +468,12 @@ export default function JewelleryShowroom() {
     }
   };
 
+  /**
+   * Create procedural neck model
+   *
+   * @param scene - Babylon.js scene
+   * @param shadowGenerator - Shadow generator
+   */
   const createNeckModel = (
     scene: Scene,
     shadowGenerator: ShadowGenerator | null,
@@ -416,6 +515,16 @@ export default function JewelleryShowroom() {
     anchor.position = new Vector3(0, 0.5, 0.3);
   };
 
+  // ============================================================================
+  // MATERIAL & COLOR HELPERS
+  // ============================================================================
+
+  /**
+   * Get PBR color for material type
+   *
+   * @param material - Material type (gold, silver, rose-gold)
+   * @returns Babylon.js Color3
+   */
   const getMaterialColor = (material: MaterialType): Color3 => {
     switch (material) {
       case "gold":
@@ -427,6 +536,15 @@ export default function JewelleryShowroom() {
     }
   };
 
+  // ============================================================================
+  // JEWELLERY TRY-ON LOGIC
+  // ============================================================================
+
+  /**
+   * Load and display selected jewellery on the model
+   *
+   * @param product - Product to try on
+   */
   const tryOnProduct = async (product: Product) => {
     if (!sceneRef.current) return;
     const scene = sceneRef.current;
@@ -441,7 +559,8 @@ export default function JewelleryShowroom() {
 
     try {
       if (product.type === "ring") {
-        // Load ring GLB model
+        // ========== RING LOADING ==========
+        // Load ring 3D model from GLB file
         const result = await SceneLoader.ImportMeshAsync(
           "",
           "/models/ring/",
@@ -475,7 +594,8 @@ export default function JewelleryShowroom() {
 
         setCurrentJewellery(ringMesh as Mesh);
       } else if (product.type === "necklace") {
-        // Create necklace chain
+        // ========== NECKLACE CREATION ==========
+        // Create procedural necklace geometry
         const chain = MeshBuilder.CreateTorus(
           "necklace",
           { diameter: 0.6, thickness: 0.015, tessellation: 48 },
@@ -508,9 +628,11 @@ export default function JewelleryShowroom() {
         pendant.material = mat;
 
         chain.metadata = { pendant };
+
         setCurrentJewellery(chain);
       } else if (product.type === "bracelet") {
-        // Create bracelet
+        // ========== BRACELET CREATION ==========
+        // Create procedural bracelet geometry
         const bracelet = MeshBuilder.CreateTorus(
           "bracelet",
           { diameter: 0.15, thickness: 0.025, tessellation: 32 },
@@ -536,6 +658,10 @@ export default function JewelleryShowroom() {
     }
   };
 
+  /**
+   * Handle try-on button click
+   * Switches view mode if needed and loads jewellery
+   */
   const handleTryOn = () => {
     if (selectedProduct) {
       // Switch view if needed
@@ -555,14 +681,18 @@ export default function JewelleryShowroom() {
     }
   };
 
+  // ============================================================================
+  // RENDER UI
+  // ============================================================================
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
-      {/* Header */}
+      {/* ========== HEADER ========== */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-gray-900">
-              💎 3D Jewellery Showroom
+              3D Jewellery Showroom
             </h1>
             <a
               href="/"
@@ -576,7 +706,7 @@ export default function JewelleryShowroom() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Product Sidebar */}
+          {/* ========== PRODUCT SIDEBAR ========== */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-4 space-y-4">
               <h2 className="text-lg font-semibold text-gray-900">Products</h2>
@@ -648,7 +778,7 @@ export default function JewelleryShowroom() {
             </div>
           </div>
 
-          {/* 3D Viewer */}
+          {/* ========== 3D VIEWER CANVAS ========== */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
               {isLoading && (

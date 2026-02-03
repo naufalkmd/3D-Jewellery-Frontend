@@ -1,8 +1,20 @@
 /**
- * Product data structure and examples for e-commerce integration
+ * Product Data Management Module
+ * 
+ * Provides comprehensive data structures and utilities for managing jewellery
+ * products in an e-commerce environment. Includes filtering, sorting, searching,
+ * and integration helpers for platforms like Shopify.
+ * 
+ * @module productExamples
  */
 
-export interface ProductVariant {
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * Product variant (e.g., different materials or sizes of the same design)
+ */
   id: string;
   material: string;
   color: string;
@@ -10,34 +22,70 @@ export interface ProductVariant {
   assetPath?: string;
 }
 
+/**
+ * Main product data structure
+ * 
+ * Comprehensive product information including metadata, pricing,
+ * inventory, 3D assets, and e-commerce integration fields.
+ */
 export interface Product {
-  id: string;
-  name: string;
-  description: string;
-  type: "ring" | "necklace" | "bracelet" | "earring";
-  category: string;
-  price: number;
-  compareAtPrice?: number; // Original price for sales
-  material: string;
-  weight?: string; // e.g., "3.5g"
-  dimensions?: string; // e.g., "18mm diameter"
-  assetPath?: string; // Path to 3D model
-  anchorPoint?: string; // Anchor for 3D try-on
-  images: string[];
-  thumbnail: string;
-  inStock: boolean;
-  stockQuantity?: number;
-  sku: string;
-  tags: string[];
-  variants?: ProductVariant[];
-  rating?: number;
-  reviewCount?: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  // ========== CORE IDENTIFIERS ==========
+  id: string;                    // Unique product ID
+  sku: string;                   // Stock keeping unit
+  
+  // ========== BASIC INFO ==========
+  name: string;                  // Product display name
+  description: string;           // Full product description (HTML/markdown supported)
+  type: "ring" | "necklace" | "bracelet" | "earring"; // Jewellery type
+  category: string;              // Category (e.g., "Wedding Rings")
+  tags: string[];                // Searchable tags
+  
+  // ========== PRICING ==========
+  price: number;                 // Current price
+  compareAtPrice?: number;       // Original price (for sales/discounts)
+  
+  // ========== MATERIALS & SPECS ==========
+  material: string;              // Material description (e.g., "18K Gold")
+  weight?: string;               // Physical weight (e.g., "3.5g")
+  dimensions?: string;           // Size info (e.g., "18mm diameter")
+  
+  // ========== 3D ASSETS ==========
+  assetPath?: string;            // Path to 3D GLB/glTF model
+  anchorPoint?: string;          // Anchor name for try-on placement
+  
+  // ========== MEDIA ==========
+  images: string[];              // Array of image URLs
+  thumbnail: string;             // Thumbnail image URL
+  
+  // ========== INVENTORY ==========
+  inStock: boolean;              // Availability status
+  stockQuantity?: number;        // Available quantity
+  
+  // ========== VARIANTS ==========
+  variants?: ProductVariant[];   // Product variations
+  
+  // ========== SOCIAL PROOF ==========
+  rating?: number;               // Average rating (0-5)
+  reviewCount?: number;          // Number of reviews
+  
+  // ========== TIMESTAMPS ==========
+  createdAt?: Date;              // Creation date
+  updatedAt?: Date;              // Last update date
 }
 
+// ============================================================================
+// SAMPLE PRODUCT CATALOG
+// ============================================================================
+
 /**
- * Example product catalog
+ * Example product catalog demonstrating the full data structure
+ * 
+ * Use these as templates for your actual product data.
+ * In production, this data would typically come from:
+ * - Database (PostgreSQL, MongoDB, etc.)
+ * - E-commerce platform API (Shopify, WooCommerce)
+ * - Headless CMS (Contentful, Sanity)
+ * - Custom API endpoint
  */
 export const SAMPLE_PRODUCTS: Product[] = [
   {
@@ -135,8 +183,17 @@ export const SAMPLE_PRODUCTS: Product[] = [
   },
 ];
 
+// ============================================================================
+// E-COMMERCE PLATFORM INTEGRATION
+// ============================================================================
+
 /**
- * E-commerce Integration Example: Shopify
+ * Shopify product structure
+ * 
+ * This interface matches Shopify's REST Admin API product format.
+ * Use for integrating with Shopify stores.
+ * 
+ * @see https://shopify.dev/docs/api/admin-rest/2024-01/resources/product
  */
 export interface ShopifyProduct {
   id: string;
@@ -190,8 +247,16 @@ export function convertShopifyProduct(shopifyProduct: ShopifyProduct): Product {
   };
 }
 
+// ============================================================================
+// PRODUCT FILTERING & SEARCH UTILITIES
+// ============================================================================
+
 /**
- * Filter products by type
+ * Filter products by jewellery type
+ * 
+ * @param products - Array of products to filter
+ * @param type - Jewellery type to filter by
+ * @returns Filtered product array
  */
 export function filterByType(
   products: Product[],
@@ -202,6 +267,11 @@ export function filterByType(
 
 /**
  * Filter products by price range
+ * 
+ * @param products - Array of products to filter
+ * @param minPrice - Minimum price (inclusive)
+ * @param maxPrice - Maximum price (inclusive)
+ * @returns Filtered product array
  */
 export function filterByPriceRange(
   products: Product[],
@@ -213,6 +283,12 @@ export function filterByPriceRange(
 
 /**
  * Filter products by material
+ * 
+ * Performs case-insensitive partial matching on material field.
+ * 
+ * @param products - Array of products to filter
+ * @param material - Material to search for (e.g., "gold", "silver")
+ * @returns Filtered product array
  */
 export function filterByMaterial(
   products: Product[],
@@ -223,9 +299,11 @@ export function filterByMaterial(
   );
 }
 
-/**
- * Sort products
- */
+// ============================================================================
+// PRODUCT SORTING
+// ============================================================================
+
+/** Available sorting options */
 export type SortOption =
   | "price-asc"
   | "price-desc"
@@ -258,7 +336,19 @@ export function sortProducts(
 }
 
 /**
- * Search products by query
+ * Search products by text query
+ * 
+ * Searches across product name, description, and tags.
+ * Case-insensitive fuzzy matching.
+ * 
+ * @param products - Array of products to search
+ * @param query - Search query string
+ * @returns Matching products
+ * 
+ * @example
+ * ```typescript
+ * const results = searchProducts(SAMPLE_PRODUCTS, 'gold ring');
+ * ```
  */
 export function searchProducts(products: Product[], query: string): Product[] {
   const lowerQuery = query.toLowerCase();
@@ -271,7 +361,27 @@ export function searchProducts(products: Product[], query: string): Product[] {
 }
 
 /**
- * Get related products
+ * Get related/recommended products
+ * 
+ * Finds products similar to the current one based on:
+ * - Same jewellery type
+ * - Shared tags
+ * 
+ * Useful for "You may also like" sections.
+ * 
+ * @param products - Full product catalog
+ * @param currentProduct - Product to find related items for
+ * @param limit - Maximum number of related products to return
+ * @returns Array of related products
+ * 
+ * @example
+ * ```typescript
+ * const related = getRelatedProducts(
+ *   SAMPLE_PRODUCTS,
+ *   selectedProduct,
+ *   4
+ * );
+ * ```
  */
 export function getRelatedProducts(
   products: Product[],

@@ -1,12 +1,37 @@
+/**
+ * Jewellery Asset Loader Module
+ *
+ * Provides utilities for loading and managing 3D jewellery assets in Babylon.js.
+ * This module handles GLB/glTF model loading, anchor point creation, and
+ * product catalog structures for e-commerce integration.
+ *
+ * @module JewelleryAssetLoader
+ */
+
 import { Scene, SceneLoader, TransformNode, Vector3 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 
+// ============================================================================
+// ASSET LOADING FUNCTIONS
+// ============================================================================
+
 /**
- * Load a glTF/GLB jewellery asset
- * @param scene - Babylon.js scene
- * @param assetPath - Path to the glTF/GLB file (e.g., '/models/jewellery/ring.glb')
- * @param anchorName - Name of the anchor to attach to (e.g., 'anchor_ring_middle')
- * @returns Promise with the loaded mesh container
+ * Load a glTF/GLB jewellery asset and attach to anchor point
+ *
+ * @param scene - Babylon.js scene where the asset will be loaded
+ * @param assetPath - Full path to the glTF/GLB file (e.g., '/models/jewellery/ring.glb')
+ * @param anchorName - Name of the anchor transform node to attach to (e.g., 'anchor_ring_middle')
+ * @returns Promise resolving to the loaded mesh container with all meshes
+ * @throws Error if asset fails to load
+ *
+ * @example
+ * ```typescript
+ * const result = await loadJewelleryAsset(
+ *   scene,
+ *   '/models/ring/diamond.glb',
+ *   'anchor_ring_middle'
+ * );
+ * ```
  */
 export async function loadJewelleryAsset(
   scene: Scene,
@@ -14,13 +39,13 @@ export async function loadJewelleryAsset(
   anchorName: string,
 ) {
   try {
-    // Load the asset
+    // Load the GLB/glTF asset using SceneLoader
     const result = await SceneLoader.ImportMeshAsync("", "", assetPath, scene);
 
-    // Get the root mesh
+    // Extract root mesh from loaded result
     const rootMesh = result.meshes[0];
 
-    // Find the anchor point
+    // Find the anchor point by name in the scene
     const anchor = scene.getTransformNodeByName(anchorName);
 
     if (anchor) {
@@ -39,11 +64,24 @@ export async function loadJewelleryAsset(
 }
 
 /**
- * Create an anchor point at a specific position
- * @param name - Name of the anchor
- * @param position - Position in 3D space
- * @param scene - Babylon.js scene
- * @returns TransformNode anchor
+ * Create an anchor point (empty transform node) at a specific 3D position
+ *
+ * Anchors serve as attachment points for jewellery items on body models.
+ * They maintain consistent positioning and allow easy parent-child relationships.
+ *
+ * @param name - Unique identifier for the anchor (e.g., 'anchor_ring_middle')
+ * @param position - 3D position in world space
+ * @param scene - Babylon.js scene where the anchor will be created
+ * @returns TransformNode anchor that can be used as a parent for meshes
+ *
+ * @example
+ * ```typescript
+ * const anchor = createAnchor(
+ *   'anchor_necklace',
+ *   new Vector3(0, 1.5, 0),
+ *   scene
+ * );
+ * ```
  */
 export function createAnchor(
   name: string,
@@ -55,8 +93,15 @@ export function createAnchor(
   return anchor;
 }
 
+// ============================================================================
+// PRODUCT DATA STRUCTURES
+// ============================================================================
+
 /**
- * Product catalog structure for integration
+ * Product catalog structure for e-commerce integration
+ *
+ * This interface defines the complete product data structure including
+ * metadata, pricing, variants, and 3D asset information.
  */
 export interface JewelleryProduct {
   id: string;
@@ -78,7 +123,10 @@ export interface JewelleryProduct {
 }
 
 /**
- * Example product catalog
+ * Example product catalog demonstrating the data structure
+ *
+ * Use this as a template for integrating with your e-commerce backend
+ * (Shopify, WooCommerce, custom API, etc.)
  */
 export const EXAMPLE_PRODUCTS: JewelleryProduct[] = [
   {
@@ -114,23 +162,40 @@ export const EXAMPLE_PRODUCTS: JewelleryProduct[] = [
   },
 ];
 
+// ============================================================================
+// ANCHOR POSITION DEFINITIONS
+// ============================================================================
+
 /**
- * Anchor positions for different body parts
+ * Predefined anchor positions for different body parts and jewellery types
+ *
+ * These positions are calibrated for the standard hand and neck models.
+ * Adjust values based on your specific 3D models.
+ *
+ * Coordinate system:
+ * - X: Left (-) to Right (+)
+ * - Y: Down (-) to Up (+)
+ * - Z: Back (-) to Front (+)
  */
 export const ANCHOR_POSITIONS = {
-  // Hand anchors
+  // ========== HAND & FINGER ANCHORS ==========
+  // Positions for rings on each finger
   ring_thumb: new Vector3(-0.4, 0.2, 0.65),
   ring_index: new Vector3(-0.25, 0.2, 0.95),
   ring_middle: new Vector3(0, 0.2, 1.0),
   ring_ring: new Vector3(0.25, 0.2, 0.95),
   ring_pinky: new Vector3(0.45, 0.2, 0.85),
+
+  // Position for wrist bracelet
   bracelet_wrist: new Vector3(0, 0.1, -0.6),
 
-  // Neck anchors
+  // ========== NECK ANCHORS ==========
+  // Positions for necklaces at different lengths
   necklace_collarbone: new Vector3(0, 0.5, 0.3),
   necklace_chest: new Vector3(0, 0.2, 0.35),
 
-  // Ear anchors
+  // ========== EAR ANCHORS ==========
+  // Positions for earrings
   earring_left: new Vector3(-0.35, 1.5, 0),
   earring_right: new Vector3(0.35, 1.5, 0),
 };

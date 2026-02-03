@@ -1,26 +1,61 @@
+/**
+ * Global Styles
+ * 
+ * This file contains:
+ * - Tailwind CSS imports
+ * - CSS custom properties (variables) for theming
+ * - Global element styling
+ * - Custom utility classes
+ */
+
+/* ========================================================================== */
+/* TAILWIND CSS LAYERS                                                       */
+/* ========================================================================== */
+
+/* Import Tailwind's base styles (CSS reset & base element styles) */
 @tailwind base;
+
+/* Import Tailwind's component classes (buttons, cards, etc.) */
 @tailwind components;
+
+/* Import Tailwind's utility classes (spacing, colors, etc.) */
 @tailwind utilities;
 
+/* ========================================================================== */
+/* CSS CUSTOM PROPERTIES (THEME VARIABLES)                                   */
+/* ========================================================================== */
+
+/* Light mode color scheme */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #ffffff; /* Page background color */
+  --foreground: #171717; /* Primary text color */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0a0a0a; /* Dark background */
+    --foreground: #ededed; /* Light text for dark mode */
   }
 }
 
+/* ========================================================================== */
+/* GLOBAL ELEMENT STYLES                                                      */
+/* ========================================================================== */
+
+/** Body element styling using CSS variables */
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* ========================================================================== */
+/* CUSTOM UTILITY CLASSES                                                     */
+/* ========================================================================== */
+
+/** Custom utilities added to Tailwind's utility layer */
 @layer utilities {
+  /** Text balance for improved typography (prevents orphaned words) */
   .text-balance {
     text-wrap: balance;
   }
