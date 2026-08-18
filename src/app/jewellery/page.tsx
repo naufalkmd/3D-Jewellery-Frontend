@@ -17,6 +17,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
+  Hand,
+  Info,
+  Loader2,
+  MousePointer2,
+  ShoppingBag,
+  Sparkles,
+  ZoomIn,
+} from "lucide-react";
+import {
   Engine,
   Scene,
   ArcRotateCamera,
@@ -686,19 +696,20 @@ export default function JewelleryShowroom() {
   // ============================================================================
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-gray-900">
       {/* ========== HEADER ========== */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               3D Jewellery Showroom
             </h1>
             <a
               href="/"
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
             >
-              ← Back to Home
+              <ArrowLeft aria-hidden="true" className="w-4 h-4" />
+              Back to Home
             </a>
           </div>
         </div>
@@ -708,53 +719,68 @@ export default function JewelleryShowroom() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* ========== PRODUCT SIDEBAR ========== */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-4 space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900">Products</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 space-y-5">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <ShoppingBag
+                  aria-hidden="true"
+                  className="w-5 h-5 text-purple-600 dark:text-purple-400"
+                />
+                Products
+              </h2>
 
               {/* View Mode Toggle */}
-              <div className="flex gap-2">
+              <div
+                className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-lg"
+                role="group"
+                aria-label="View mode"
+              >
                 <button
                   onClick={() => setViewMode("hand")}
-                  className={`flex-1 px-3 py-2 rounded text-sm font-medium transition ${
+                  aria-pressed={viewMode === "hand"}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition ${
                     viewMode === "hand"
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                   }`}
                 >
-                  👋 Hand
+                  <Hand aria-hidden="true" className="w-4 h-4" />
+                  Hand
                 </button>
                 <button
                   onClick={() => setViewMode("neck")}
-                  className={`flex-1 px-3 py-2 rounded text-sm font-medium transition ${
+                  aria-pressed={viewMode === "neck"}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition ${
                     viewMode === "neck"
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                   }`}
                 >
-                  💎 Neck
+                  <Sparkles aria-hidden="true" className="w-4 h-4" />
+                  Neck
                 </button>
               </div>
 
               {/* Product List */}
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
                 {PRODUCTS.map((product) => (
                   <button
                     key={product.id}
                     onClick={() => setSelectedProduct(product)}
-                    className={`w-full text-left p-3 rounded-lg border-2 transition ${
+                    aria-pressed={selectedProduct?.id === product.id}
+                    className={`w-full text-left p-3 rounded-lg border transition ${
                       selectedProduct?.id === product.id
-                        ? "border-purple-600 bg-purple-50"
-                        : "border-gray-200 hover:border-purple-300 bg-white"
+                        ? "border-purple-500 dark:border-purple-500 bg-purple-50 dark:bg-purple-950/40"
+                        : "border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 bg-white dark:bg-gray-800"
                     }`}
                   >
-                    <div className="font-semibold text-sm text-gray-900">
+                    <div className="font-semibold text-sm text-gray-900 dark:text-white">
                       {product.name}
                     </div>
-                    <div className="text-xs text-gray-600 mt-1">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                       {product.type.charAt(0).toUpperCase() +
                         product.type.slice(1)}
                     </div>
-                    <div className="text-sm font-bold text-purple-600 mt-1">
+                    <div className="text-sm font-bold text-purple-600 dark:text-purple-400 mt-1">
                       ${product.price}
                     </div>
                   </button>
@@ -763,14 +789,14 @@ export default function JewelleryShowroom() {
 
               {/* Try On Button */}
               {selectedProduct && (
-                <div className="pt-4 border-t">
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleTryOn}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition shadow-md hover:shadow-lg"
+                    className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition shadow-md hover:shadow-lg motion-safe:hover:scale-[1.02]"
                   >
                     Try On
                   </button>
-                  <div className="mt-2 text-xs text-center text-gray-500">
+                  <div className="mt-2 text-xs text-center text-gray-500 dark:text-gray-400">
                     {selectedProduct.name} • ${selectedProduct.price}
                   </div>
                 </div>
@@ -780,11 +806,15 @@ export default function JewelleryShowroom() {
 
           {/* ========== 3D VIEWER CANVAS ========== */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative">
               {isLoading && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-                  <div className="text-white text-lg font-semibold">
-                    Loading 3D Model...
+                <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10">
+                  <Loader2
+                    aria-hidden="true"
+                    className="w-8 h-8 text-white motion-safe:animate-spin"
+                  />
+                  <div className="text-white text-sm font-medium">
+                    Loading 3D model…
                   </div>
                 </div>
               )}
@@ -793,35 +823,42 @@ export default function JewelleryShowroom() {
                 className="w-full"
                 style={{ height: "600px" }}
               />
-              <div className="p-4 bg-gray-50 border-t">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    <strong>Controls:</strong> Drag to rotate • Scroll to zoom
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    Viewing:{" "}
-                    <strong>
-                      {viewMode === "hand" ? "Hand Model" : "Neck Model"}
-                    </strong>
-                  </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between flex-wrap gap-2">
+                <div className="inline-flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                  <span className="inline-flex items-center gap-1.5">
+                    <MousePointer2 aria-hidden="true" className="w-4 h-4" />
+                    Drag to rotate
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <ZoomIn aria-hidden="true" className="w-4 h-4" />
+                    Scroll to zoom
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Viewing{" "}
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {viewMode === "hand" ? "Hand Model" : "Neck Model"}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Instructions */}
-            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-2">How to Use:</h3>
-              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+            <div className="mt-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <Info
+                  aria-hidden="true"
+                  className="w-4 h-4 text-purple-600 dark:text-purple-400"
+                />
+                How to use
+              </h3>
+              <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-decimal list-inside">
                 <li>Wait for the hand model to load</li>
                 <li>Select a product from the sidebar</li>
                 <li>Click "Try On" to see it on the 3D model</li>
                 <li>Drag to rotate the view, scroll to zoom</li>
                 <li>Toggle between Hand and Neck views</li>
               </ol>
-              <div className="mt-3 text-xs text-blue-700">
-                <strong>Note:</strong> Using original cinematic split-lighting
-                with red/cyan key lights for dramatic effect
-              </div>
             </div>
           </div>
         </div>
